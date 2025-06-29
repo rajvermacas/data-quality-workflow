@@ -1,0 +1,244 @@
+{
+  "name": "Data Quality Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "data-quality",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        0
+      ],
+      "id": "7bf7806a-c3db-4113-9fdf-b3734ee638ef",
+      "name": "Webhook",
+      "webhookId": "71e0292a-03ab-443a-a99f-2e781d9d47fc"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# GitLab Issue Formatter Prompt\n\nYou are an expert technical issue formatter specializing in creating well-structured GitLab issues from natural language descriptions. Transform the provided alert/issue description into a comprehensive GitLab issue format.\n\n## Extraction and Formatting Guidelines:\n\n### 1. Title (Required)\n- Create a concise, actionable title (max 80 characters)\n- Use imperative mood (e.g., \"Fix\", \"Resolve\", \"Investigate\")\n- Include key components/systems affected\n- Avoid generic words like \"issue\" or \"problem\"\n- Format: `[Action] [Component/Service] [Brief description]`\n\n### 2. Description (Required)\nStructure the description with the following sections using markdown formatting:\n\n```markdown\n## Problem Summary\nBrief overview of the issue\n\n## Expected Behavior\nWhat should be happening\n\n## Current Behavior\nWhat is actually happening\n\n## Impact\n- Business impact\n- User impact\n- System impact\n\n## Technical Details\n- Error messages/logs (if any)\n- Steps to reproduce\n- Environment details\n- Timestamps (if available)\n\n## Additional Context\nAny other relevant information\n```\n\n### 3. Severity Classification (Required)\nClassify based on impact and urgency:\n- **Critical**: System down, data loss, security breach, affects all users\n- **High**: Major functionality broken, affects many users, workaround difficult\n- **Medium**: Minor functionality issues, affects some users, workaround available\n- **Low**: Cosmetic issues, documentation, affects few users\n\n### 4. Labels (Required)\nSuggest 3-5 relevant labels from these categories:\n- **Type**: `bug`, `feature`, `enhancement`, `documentation`, `security`\n- **Component**: `database`, `api`, `frontend`, `backend`, `infrastructure`\n- **Environment**: `production`, `staging`, `development`\n- **Domain**: `performance`, `security`, `monitoring`, `deployment`\n\n### 5. Assignee (Optional)\n- Extract any email addresses mentioned in the input text\n- If multiple assignees are found, separate with \" + \"\n- If no assignee is mentioned, leave as empty string \"\"\n\n## Response Format\n\nReturn as valid JSON with this exact structure:\n\n```json\n{\n  \"title\": \"string (max 80 chars)\",\n  \"description\": \"string (markdown formatted)\",\n  \"severity\": \"Critical|High|Medium|Low\",\n  \"labels\": [\"array\", \"of\", \"strings\"],\n  \"assignee\": \"email addresses found in input or empty string\"\n}\n```\n\n## Quality Checklist\nBefore finalizing, ensure:\n- [ ] Title is actionable and specific\n- [ ] Description includes all relevant sections\n- [ ] Severity matches actual impact\n- [ ] Labels are relevant and categorized\n- [ ] Assignee field contains only emails found in input\n- [ ] JSON is valid and properly formatted\n\nTransform the following input into a structured GitLab issue:"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        0
+      ],
+      "id": "b93e2f8a-326d-400a-9916-40ee9fcf2b8a",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        440,
+        240
+      ],
+      "id": "c90e84af-040d-418c-9a06-771be2499f65",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "oJIxDfKD4MHpEF6L",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "owner": "my-group-name2452611",
+        "repository": "data-quality",
+        "title": "={{ $json.title }}",
+        "body": "={{ $json.description }}",
+        "labels": [
+          {
+            "label": "={{ $json.labels }}"
+          }
+        ],
+        "assignee_ids": [
+          {
+            "assignee": "={{ $json.assignee }}"
+          }
+        ]
+      },
+      "type": "n8n-nodes-base.gitlab",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "857b404b-84d1-4966-b620-5959fb2f227a",
+      "name": "Create an issue",
+      "credentials": {
+        "gitlabOAuth2Api": {
+          "id": "w0Ak7qUJQYq3m4Id",
+          "name": "GitLab account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst parsedItems = items.map((item) => {\n  let text = item?.json?.text || '';\n  // Remove leading/trailing code fences (```json or ```), possibly with or without \"json\"\n  text = text.replace(/^```json\\s*/i, '').replace(/```$/g, '').trim();\n  try {\n    const parsedText = JSON.parse(text);\n    return { json: parsedText };\n  } catch (e) {\n    // If parsing fails, pass the original text and error message\n    return { json: { originalText: item?.json?.text, error: e.message } };\n  }\n});\nreturn parsedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ],
+      "id": "59d12fb6-d085-4c74-a0c1-1c5a6776b833",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "fromEmail": "aibardchatgpt17@gmail.com",
+        "toEmail": "=mrinalrajubereats1@gmail.com,{{ $('Code').item.json.assignee }}",
+        "subject": "={{ $('Code').item.json.title }} [Gitlab Issue Created]",
+        "html": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>GitLab Issue Created</title>\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            line-height: 1.6;\n            color: #2e2e2e;\n            background-color: #fafafa;\n        }\n        \n        .email-container {\n            max-width: 600px;\n            margin: 0 auto;\n            background-color: #ffffff;\n            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);\n        }\n        \n        .header {\n            background: linear-gradient(135deg, #FC6D26 0%, #E24329 100%);\n            padding: 30px 40px;\n            text-align: center;\n        }\n        \n        .logo-section {\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            margin-bottom: 10px;\n        }\n        \n        .gitlab-logo {\n            width: 40px;\n            height: 40px;\n            background-color: #ffffff;\n            border-radius: 8px;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            margin-right: 15px;\n            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);\n        }\n        \n        .gitlab-icon {\n            width: 24px;\n            height: 24px;\n            background: linear-gradient(135deg, #FC6D26 0%, #E24329 100%);\n            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);\n        }\n        \n        .header h1 {\n            color: #ffffff;\n            font-size: 24px;\n            font-weight: 600;\n            margin: 0;\n        }\n        \n        .header p {\n            color: #ffffff;\n            opacity: 0.9;\n            font-size: 14px;\n            margin-top: 5px;\n        }\n        \n        .content {\n            padding: 40px;\n        }\n        \n        .greeting {\n            font-size: 18px;\n            color: #2e2e2e;\n            margin-bottom: 20px;\n            font-weight: 500;\n        }\n        \n        .issue-notification {\n            background-color: #f8f9fa;\n            border-left: 4px solid #FC6D26;\n            padding: 20px;\n            margin: 25px 0;\n            border-radius: 0 8px 8px 0;\n        }\n        \n        .issue-title {\n            font-size: 16px;\n            color: #2e2e2e;\n            margin-bottom: 15px;\n            font-weight: 600;\n        }\n        \n        .issue-details {\n            color: #5c5c5c;\n            font-size: 14px;\n            line-height: 1.5;\n        }\n        \n        .cta-section {\n            text-align: center;\n            margin: 30px 0;\n        }\n        \n        .cta-button {\n            display: inline-block;\n            background: linear-gradient(135deg, #FC6D26 0%, #E24329 100%);\n            color: #ffffff !important;\n            text-decoration: none;\n            padding: 14px 28px;\n            border-radius: 8px;\n            font-weight: 600;\n            font-size: 14px;\n            box-shadow: 0 2px 4px rgba(252, 109, 38, 0.3);\n            transition: all 0.3s ease;\n        }\n        \n        .cta-button:hover {\n            transform: translateY(-1px);\n            box-shadow: 0 4px 8px rgba(252, 109, 38, 0.4);\n        }\n        \n        .url-section {\n            background-color: #f8f9fa;\n            padding: 15px;\n            border-radius: 8px;\n            margin: 20px 0;\n            border: 1px solid #e9ecef;\n        }\n        \n        .url-label {\n            font-size: 12px;\n            color: #6c757d;\n            text-transform: uppercase;\n            font-weight: 600;\n            margin-bottom: 5px;\n        }\n        \n        .url-link {\n            color: #FC6D26;\n            text-decoration: none;\n            font-size: 14px;\n            word-break: break-all;\n            font-family: 'Courier New', monospace;\n        }\n        \n        .url-link:hover {\n            text-decoration: underline;\n        }\n        \n        .footer {\n            background-color: #2e2e2e;\n            padding: 30px 40px;\n            text-align: center;\n        }\n        \n        .footer-content {\n            color: #ffffff;\n        }\n        \n        .footer h3 {\n            font-size: 16px;\n            margin-bottom: 8px;\n            color: #FC6D26;\n        }\n        \n        .footer p {\n            color: #cccccc;\n            font-size: 14px;\n            margin-bottom: 20px;\n        }\n        \n        .footer-note {\n            font-size: 12px;\n            color: #888888;\n            border-top: 1px solid #444444;\n            padding-top: 20px;\n            margin-top: 20px;\n        }\n        \n        @media (max-width: 600px) {\n            .email-container {\n                margin: 0;\n                box-shadow: none;\n            }\n            \n            .header, .content, .footer {\n                padding: 20px;\n            }\n            \n            .header h1 {\n                font-size: 20px;\n            }\n            \n            .cta-button {\n                padding: 12px 24px;\n                font-size: 13px;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div class=\"email-container\">\n        <!-- Header -->\n        <div class=\"header\">\n            <div class=\"logo-section\">\n                <div class=\"gitlab-logo\">\n                    <div class=\"gitlab-icon\"></div>\n                </div>\n                <h1>GitLab</h1>\n            </div>\n            <p>Issue Notification System</p>\n        </div>\n        \n        <!-- Content -->\n        <div class=\"content\">\n            <div class=\"greeting\">\n                Hi GitLab User,\n            </div>\n            \n            <div class=\"issue-notification\">\n                <div class=\"issue-title\">\n                    🔥 New GitLab Issue Created\n                </div>\n                <div class=\"issue-details\">\n                    An issue has been created for: <strong>{{ $('Code').item.json.title }}</strong>\n                </div>\n            </div>\n            \n            <div class=\"url-section\">\n                <div class=\"url-label\">GitLab Issue URL</div>\n                <a href=\"{{ $json.web_url }}\" class=\"url-link\">{{ $json.web_url }}</a>\n            </div>\n            \n            <div class=\"cta-section\">\n                <a href=\"{{ $json.web_url }}\" class=\"cta-button\">\n                    View Issue in GitLab →\n                </a>\n            </div>\n        </div>\n        \n        <!-- Footer -->\n        <div class=\"footer\">\n            <div class=\"footer-content\">\n                <h3>Data Quality AI Workflow</h3>\n                <p>Automated issue tracking and quality management</p>\n                \n                <div class=\"footer-note\">\n                    This email was automatically generated by your Data Quality AI Workflow.<br>\n                    Please do not reply to this email.\n                </div>\n            </div>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1380,
+        0
+      ],
+      "id": "13c3e384-07ae-4cee-a745-49f97c2b64d4",
+      "name": "Send email",
+      "webhookId": "df21546b-f015-46c4-a049-e9b5fca3b7ae",
+      "credentials": {
+        "smtp": {
+          "id": "JReK6IkUu3uSCIiY",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"workflowStatus\": \"completed\",\n  \"issueWebUrl\": \"{{ $('Create an issue').item.json.web_url }}\"\n} ",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "b4386827-25ba-46bc-a527-88237e926168",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Create an issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an issue": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2840a3c6-e4da-46b3-afeb-cc58300f3404",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bc5937d7eaa5a083fcd2d37b3ecd6f72e896d5176042b548a80a5a84e035c486"
+  },
+  "id": "VbDEMXYz1rLlEv1P",
+  "tags": [
+    {
+      "createdAt": "2025-06-29T09:01:07.182Z",
+      "updatedAt": "2025-06-29T09:01:07.182Z",
+      "id": "LahDQ8vtihRLGX3u",
+      "name": "automation"
+    },
+    {
+      "createdAt": "2025-06-29T09:01:07.161Z",
+      "updatedAt": "2025-06-29T09:01:07.161Z",
+      "id": "h3c76i2hCxQ5840Q",
+      "name": "data-quality"
+    }
+  ]
+}
