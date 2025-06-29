@@ -1,0 +1,62 @@
+{
+  "name": "Data Quality Alert to GitLab Issue",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "data-quality-alerts",
+        "options": {}
+      },
+      "name": "Data Quality Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Code will be added manually"
+      },
+      "name": "Analyze and Categorize",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "resource": "issue",
+        "operation": "create",
+        "projectOwner": "your-gitlab-group",
+        "projectName": "data-quality-issues",
+        "title": "={{$json.gitlab.title}}",
+        "body": "={{$json.gitlab.body}}"
+      },
+      "name": "Create GitLab Issue",
+      "type": "n8n-nodes-base.gitlab",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "data-quality@yourcompany.com",
+        "toEmail": "data-team@yourcompany.com",
+        "subject": "Data Quality Alert",
+        "text": "A GitLab issue has been created.",
+        "options": {}
+      },
+      "name": "Send Email Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Data Quality Alert Webhook": {
+      "main": [[{"node": "Analyze and Categorize", "type": "main", "index": 0}]]
+    },
+    "Analyze and Categorize": {
+      "main": [[{"node": "Create GitLab Issue", "type": "main", "index": 0}]]
+    },
+    "Create GitLab Issue": {
+      "main": [[{"node": "Send Email Alert", "type": "main", "index": 0}]]
+    }
+  }
+}

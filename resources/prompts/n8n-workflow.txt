@@ -1,0 +1,67 @@
+Discuss with me on the below requirement. 
+1. I am creating an n8n workflow.
+2. The workflow should have 4 nodes.
+3. First node - A webhook, which should be able to take inputs regarding an issue which needs to be created in the gitlab.
+4. Second node - An Agent that should be able to take the input from the webhook node and then use llm to create a good gitlab issue format.
+5. Third node - It should be able to take the input from previous node and create a gitlab issue.
+6. fourth node - A mail should be sent to the assignee for checking the issue.
+
+
+Answers (Iteration 1):
+Webhook Input Structure
+1. This workflow should be triggered when the webhook is called
+2. The webhook will receive just an input string in natrual language.
+3. No authentication required for the webhook
+
+LLM Agent Integration:
+1. I want to use Google Gemini 2.5 flash
+2. The LLM should be able to take the input from previous node in natural language and should be able to format it according to a gitlab issue.
+3. Yes
+
+GitLab Issue Creation
+1. This is the url of my gitlab project: https://gitlab.com/my-group-name2452611/data-quality#
+2. No template as such but try to put all the information together in a well format so that a proper gitlab issue can be created in the next node.
+3. The user should be sending the assignee email address. And for severity the llm should be able to find out itself.
+4. llm should be able to suggest a proper label
+
+Email Notification Strategy
+1. The email should be sent to the assignee.
+2. Create a html template for the email
+
+Answers (Iteration 2):
+Webhook Input Clarification
+1. yes correct. {"message": "Database connection timeout in prod 
+  environment, affecting user logins"}
+
+assignee email will be included in the same input. And it may also happen that the email is not even present. In that case the mail will not be sent to the assignee.
+Also I want to make a change that for evey mail there should be 2 receivers. One will always be mrinalrajubereats1@gmail.com and then the second one will be the assignee email address if present.
+
+Google Gemini Integration
+1. I have the gemini api key. I can provide if you want.
+2. you think of a good prompt to create a formatting of the raw input to a gitlab issue
+
+GitLab Project Details
+1. All issues should be created in https://gitlab.com/my-group-name2452611/data-quality
+
+Severity and Label Logic
+1. Yes - Critical, High, Medium, Low
+2. labels should be decided based on the context
+
+Email Template Requirements
+1. Yes this looks good - Issue title, description, GitLab URL, severity, etc.
+2. No branding required.
+3. yes it should include the gitlab issue link 
+
+Ansers (Iteration 3):
+Webhook Input Format
+1. {"message": "Database connection timeout in prod environment, affecting user logins. Assignee would be lubbapark1@gmail.com"}
+
+Gemini Prompt Design
+1. Yes looks good
+
+Error Handling
+No input validation required. Just try to get as much as you can from the user input and try to populate the gitlab issue format. 
+If something fails just show an error.
+
+Email Sending Logic
+Yes correct
