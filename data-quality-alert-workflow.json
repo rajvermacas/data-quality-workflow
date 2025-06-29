@@ -1,0 +1,184 @@
+{
+  "name": "Data Quality Alert to GitLab Issue",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "data-quality-alerts",
+        "options": {}
+      },
+      "id": "f7b1c4a0-1e2d-3b4c-5d6e-7f8g9h0i1j2k",
+      "name": "Data Quality Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.0-flash-latest",
+        "options": {
+          "systemMessage": "You are a technical issue formatter. Transform natural language alerts into structured GitLab issue format. Always respond with valid JSON only."
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{\"Transform the following natural language alert into a structured GitLab issue format.\\n\\nInput: \" + $json.message + \"\\n\\nPlease extract and format:\\n1. Title: Create a concise, actionable title (max 80 chars)\\n2. Description: Detailed technical description with context\\n3. Severity: Classify as Critical, High, Medium, or Low based on impact\\n4. Labels: Suggest 2-3 relevant labels based on content (e.g., database, production, performance)\\n5. Assignee: Extract email address if mentioned in the text\\n\\nReturn as JSON only:\\n{\\n  \\\"title\\\": \\\"...\\\",\\n  \\\"description\\\": \\\"...\\\",\\n  \\\"severity\\\": \\\"...\\\",\\n  \\\"labels\\\": [...],\\n  \\\"assignee\\\": \\\"email@domain.com or null\\\"\\n}\"}}",
+              "role": "user"
+            }
+          ]
+        }
+      },
+      "id": "g8h9i0j1-k2l3-m4n5-o6p7-q8r9s0t1u2v3",
+      "name": "Gemini AI Processor",
+      "type": "n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {
+        "googleAiApi": {
+          "id": "google-ai-credentials",
+          "name": "Google AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse Gemini Chat Model response and extract structured data\nconst geminiResponse = $input.first().json;\nconst content = geminiResponse.text || geminiResponse.response || geminiResponse.content;\n\n// Extract JSON from the response\nlet parsedData;\ntry {\n  // Remove any markdown formatting if present\n  const jsonMatch = content.match(/```json\\n([\\s\\S]*?)\\n```/) || content.match(/{[\\s\\S]*}/);\n  const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;\n  parsedData = JSON.parse(jsonString);\n} catch (error) {\n  // Fallback parsing if JSON is malformed\n  parsedData = {\n    title: \"Data Quality Issue\",\n    description: content,\n    severity: \"Medium\",\n    labels: [\"data-quality\"],\n    assignee: null\n  };\n}\n\n// Ensure labels is an array\nif (typeof parsedData.labels === 'string') {\n  parsedData.labels = [parsedData.labels];\n}\n\n// Add severity as a label\nif (parsedData.severity) {\n  parsedData.labels = parsedData.labels || [];\n  parsedData.labels.push(parsedData.severity.toLowerCase());\n}\n\n// Store original webhook data for email\nparsedData.originalMessage = $('Data Quality Alert Webhook').first().json.message;\n\nreturn parsedData;"
+      },
+      "id": "h9i0j1k2-l3m4-n5o6-p7q8-r9s0t1u2v3w4",
+      "name": "Parse Gemini Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "issue",
+        "operation": "create",
+        "projectOwner": "my-group-name2452611",
+        "projectName": "data-quality",
+        "title": "={{$json.title}}",
+        "body": "={{$json.description}}\\n\\n**Severity:** {{$json.severity}}\\n\\n**Original Alert:**\\n{{$json.originalMessage}}",
+        "labels": "={{$json.labels.join(',')}}",
+        "assignees": "={{$json.assignee ? $json.assignee : ''}}"
+      },
+      "id": "i0j1k2l3-m4n5-o6p7-q8r9-s0t1u2v3w4x5",
+      "name": "Create GitLab Issue",
+      "type": "n8n-nodes-base.gitlab",
+      "typeVersion": 1,
+      "position": [
+        950,
+        300
+      ],
+      "credentials": {
+        "gitlabApi": {
+          "id": "gitlab-token",
+          "name": "GitLab API Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@dataqualitysystem.com",
+        "toEmail": "={{$json.assignee && $json.assignee !== 'null' && $json.assignee !== null ? 'mrinalrajubereats1@gmail.com,' + $json.assignee : 'mrinalrajubereats1@gmail.com'}}",
+        "subject": "Data Quality Alert: {{$('Parse Gemini Response').first().json.title}}",
+        "emailFormat": "html",
+        "html": "<!DOCTYPE html>\\n<html>\\n<head>\\n  <style>\\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\\n    .header { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }\\n    .severity { padding: 5px 10px; border-radius: 3px; color: white; font-weight: bold; }\\n    .critical { background-color: #dc3545; }\\n    .high { background-color: #fd7e14; }\\n    .medium { background-color: #ffc107; color: #000; }\\n    .low { background-color: #28a745; }\\n    .content { background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 5px; }\\n    .footer { margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; font-size: 12px; color: #6c757d; }\\n    .button { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }\\n    .labels { margin: 10px 0; }\\n    .label { display: inline-block; padding: 2px 8px; background-color: #e9ecef; color: #495057; border-radius: 12px; font-size: 12px; margin: 2px; }\\n  </style>\\n</head>\\n<body>\\n  <div class=\\\"container\\\">\\n    <div class=\\\"header\\\">\\n      <h2>🚨 Data Quality Alert</h2>\\n      <p>A new data quality issue has been automatically created in GitLab</p>\\n    </div>\\n    \\n    <div class=\\\"content\\\">\\n      <h3>{{$('Parse Gemini Response').first().json.title}}</h3>\\n      \\n      <p><strong>Severity:</strong> \\n        <span class=\\\"severity {{$('Parse Gemini Response').first().json.severity.toLowerCase()}}\\\">\\n          {{$('Parse Gemini Response').first().json.severity}}\\n        </span>\\n      </p>\\n      \\n      <div class=\\\"labels\\\">\\n        <strong>Labels:</strong><br>\\n        {{$('Parse Gemini Response').first().json.labels.map(label => '<span class=\"label\">' + label + '</span>').join('')}}\\n      </div>\\n      \\n      <h4>Description:</h4>\\n      <p>{{$('Parse Gemini Response').first().json.description}}</p>\\n      \\n      <h4>Original Alert Message:</h4>\\n      <p><em>{{$('Parse Gemini Response').first().json.originalMessage}}</em></p>\\n      \\n      {{$('Parse Gemini Response').first().json.assignee && $('Parse Gemini Response').first().json.assignee !== 'null' ? '<p><strong>Assigned to:</strong> ' + $('Parse Gemini Response').first().json.assignee + '</p>' : ''}}\\n      \\n      <a href=\\\"{{$json.web_url}}\\\" class=\\\"button\\\">View Issue in GitLab</a>\\n    </div>\\n    \\n    <div class=\\\"footer\\\">\\n      <p>This email was automatically generated by the Data Quality Monitoring System.</p>\\n      <p>GitLab Issue #{{$json.iid}} created in project: my-group-name2452611/data-quality</p>\\n    </div>\\n  </div>\\n</body>\\n</html>",
+        "options": {}
+      },
+      "id": "j1k2l3m4-n5o6-p7q8-r9s0-t1u2v3w4x5y6",
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Email Settings"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Data Quality Alert Webhook": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI Processor": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini Response": {
+      "main": [
+        [
+          {
+            "node": "Create GitLab Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create GitLab Issue": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "12345"
+  },
+  "id": "1001",
+  "tags": [
+    {
+      "createdAt": "2025-06-29T12:00:00.000Z",
+      "updatedAt": "2025-06-29T12:00:00.000Z",
+      "id": "1",
+      "name": "data-quality"
+    },
+    {
+      "createdAt": "2025-06-29T12:00:00.000Z",
+      "updatedAt": "2025-06-29T12:00:00.000Z",
+      "id": "2",
+      "name": "automation"
+    }
+  ]
+}

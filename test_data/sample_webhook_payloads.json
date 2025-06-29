@@ -1,0 +1,92 @@
+[
+  {
+    "test_case": "Database Connection Issue with Assignee",
+    "description": "Critical database issue with specific assignee mentioned",
+    "payload": {
+      "message": "Database connection timeout in prod environment, affecting user logins. Assignee would be lubbapark1@gmail.com"
+    },
+    "expected_severity": "Critical",
+    "expected_labels": ["database", "production", "timeout"]
+  },
+  {
+    "test_case": "Performance Issue without Assignee",
+    "description": "Performance degradation without specific assignee",
+    "payload": {
+      "message": "API response times have increased by 300% over the last hour. Users are experiencing slow page loads and timeouts."
+    },
+    "expected_severity": "High",
+    "expected_labels": ["performance", "api", "timeout"]
+  },
+  {
+    "test_case": "Data Quality Issue with Multiple Contacts",
+    "description": "Data validation issue mentioning multiple team members",
+    "payload": {
+      "message": "Customer data validation failing for 15% of records. Data team lead sarah.johnson@company.com should investigate. CC: data-eng-team@company.com"
+    },
+    "expected_severity": "Medium",
+    "expected_labels": ["data-quality", "validation", "customer-data"]
+  },
+  {
+    "test_case": "Low Priority Monitoring Alert",
+    "description": "Minor monitoring alert without critical impact",
+    "payload": {
+      "message": "Disk usage on staging server reached 75%. Not critical but should be monitored. Contact devops@company.com for cleanup."
+    },
+    "expected_severity": "Low",
+    "expected_labels": ["monitoring", "disk-space", "staging"]
+  },
+  {
+    "test_case": "Security Alert",
+    "description": "Security-related issue requiring immediate attention",
+    "payload": {
+      "message": "Unusual login attempts detected from multiple IP addresses. Security team member alex.security@company.com needs to investigate immediately."
+    },
+    "expected_severity": "Critical",
+    "expected_labels": ["security", "authentication", "monitoring"]
+  },
+  {
+    "test_case": "Integration Failure",
+    "description": "Third-party integration failure affecting business operations",
+    "payload": {
+      "message": "Payment gateway integration is failing. 50% of transactions are being rejected. Please assign to payments team lead mike.payments@company.com"
+    },
+    "expected_severity": "Critical",
+    "expected_labels": ["integration", "payments", "gateway"]
+  },
+  {
+    "test_case": "Minimal Information Alert",
+    "description": "Alert with minimal context to test AI processing",
+    "payload": {
+      "message": "System error occurred. Check logs."
+    },
+    "expected_severity": "Medium",
+    "expected_labels": ["system", "error", "logs"]
+  },
+  {
+    "test_case": "Scheduled Maintenance Notification",
+    "description": "Planned maintenance notification for tracking",
+    "payload": {
+      "message": "Scheduled database maintenance completed successfully. All systems operational. Report prepared by admin@company.com"
+    },
+    "expected_severity": "Low",
+    "expected_labels": ["maintenance", "database", "completed"]
+  },
+  {
+    "test_case": "Complex Multi-Service Issue",
+    "description": "Complex issue affecting multiple services and systems",
+    "payload": {
+      "message": "Cascade failure detected: Database connection pool exhausted leading to API timeouts, which caused frontend errors and email delivery delays. Users unable to complete purchases. Urgent attention needed from platform team lead jennifer.platform@company.com and database admin tom.db@company.com"
+    },
+    "expected_severity": "Critical",
+    "expected_labels": ["cascade-failure", "database", "api", "frontend", "email"]
+  },
+  {
+    "test_case": "Data Migration Issue",
+    "description": "Data migration process encountering problems",
+    "payload": {
+      "message": "ETL pipeline failed during customer data migration. 10,000 records not processed. Data integrity check required. Assign to data engineering team lead robert.data@company.com"
+    },
+    "expected_severity": "High",
+    "expected_labels": ["etl", "migration", "data-integrity", "pipeline"]
+  }
+]
