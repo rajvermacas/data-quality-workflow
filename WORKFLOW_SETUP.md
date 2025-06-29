@@ -69,14 +69,16 @@ This n8n workflow automatically processes natural language data quality alerts, 
 - **Expected Input**: `{"message": "Natural language alert with optional assignee email"}`
 
 #### 2. Gemini AI Processor
-- **Node Type**: Google Gemini Chat Model (LangChain)
-- **Model**: `gemini-2.0-flash-latest`
-- **Function**: Transforms natural language to structured GitLab format using native n8n integration
+- **Node Type**: HTTP Request (for Google Gemini API)
+- **Model**: `gemini-1.5-flash`
+- **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
+- **Function**: Transforms natural language to structured GitLab format using direct API calls
 
 #### 3. Parse Gemini Response
 - **Type**: Function Node
-- **Purpose**: Extracts and validates JSON response from Gemini
-- **Error Handling**: Provides fallback data if parsing fails
+- **Purpose**: Extracts and validates JSON response from Gemini HTTP API
+- **Error Handling**: Multiple fallback layers for robust parsing
+- **Features**: Handles both clean JSON and markdown-formatted responses
 
 #### 4. Create GitLab Issue
 - **Project**: `my-group-name2452611/data-quality`
@@ -140,7 +142,7 @@ To customize email appearance:
 #### 1. Google AI API Errors
 - **Error**: Authentication failed or 400 Bad Request
 - **Solution**: Verify Google AI API key in credentials and check quota limits
-- **Test**: Check Google AI Studio console for API usage and quotas
+- **Test**: Use curl to test API access: `curl -H "Content-Type: application/json" -d '{"contents":[{"parts":[{"text":"test"}]}]}' "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_API_KEY"`
 
 #### 2. GitLab Authentication
 - **Error**: 401 Unauthorized

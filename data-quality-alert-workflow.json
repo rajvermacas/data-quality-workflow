@@ -18,29 +18,33 @@
     },
     {
       "parameters": {
-        "model": "gemini-2.0-flash-latest",
-        "options": {
-          "systemMessage": "You are a technical issue formatter. Transform natural language alerts into structured GitLab issue format. Always respond with valid JSON only."
-        },
-        "messages": {
-          "values": [
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "googleAi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "content": "={{\"Transform the following natural language alert into a structured GitLab issue format.\\n\\nInput: \" + $json.message + \"\\n\\nPlease extract and format:\\n1. Title: Create a concise, actionable title (max 80 chars)\\n2. Description: Detailed technical description with context\\n3. Severity: Classify as Critical, High, Medium, or Low based on impact\\n4. Labels: Suggest 2-3 relevant labels based on content (e.g., database, production, performance)\\n5. Assignee: Extract email address if mentioned in the text\\n\\nReturn as JSON only:\\n{\\n  \\\"title\\\": \\\"...\\\",\\n  \\\"description\\\": \\\"...\\\",\\n  \\\"severity\\\": \\\"...\\\",\\n  \\\"labels\\\": [...],\\n  \\\"assignee\\\": \\\"email@domain.com or null\\\"\\n}\"}}",
-              "role": "user"
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
-        }
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\"contents\":[{\"parts\":[{\"text\":\"You are a technical issue formatter. Transform the following natural language alert into a structured GitLab issue format. You must respond with valid JSON only, no markdown formatting.\\n\\nInput: {{$json.message}}\\n\\nExtract and format:\\n1. Title: Create a concise, actionable title (max 80 chars)\\n2. Description: Detailed technical description with context\\n3. Severity: Classify as Critical, High, Medium, or Low based on impact\\n4. Labels: Suggest 2-3 relevant labels (e.g., database, production, performance)\\n5. Assignee: Extract email address if mentioned, otherwise null\\n\\nRespond with this exact JSON structure:\\n{\\n  \\\"title\\\": \\\"...\\\",\\n  \\\"description\\\": \\\"...\\\",\\n  \\\"severity\\\": \\\"...\\\",\\n  \\\"labels\\\": [...],\\n  \\\"assignee\\\": \\\"email@domain.com\\\" or null\\n}\"}]}],\"generationConfig\":{\"temperature\":0.1,\"maxOutputTokens\":1000,\"responseMimeType\":\"application/json\"}}",
+        "options": {}
       },
       "id": "g8h9i0j1-k2l3-m4n5-o6p7-q8r9s0t1u2v3",
       "name": "Gemini AI Processor",
-      "type": "n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         450,
         300
       ],
       "credentials": {
-        "googleAiApi": {
+        "googleAi": {
           "id": "google-ai-credentials",
           "name": "Google AI API"
         }
@@ -48,7 +52,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Parse Gemini Chat Model response and extract structured data\nconst geminiResponse = $input.first().json;\nconst content = geminiResponse.text || geminiResponse.response || geminiResponse.content;\n\n// Extract JSON from the response\nlet parsedData;\ntry {\n  // Remove any markdown formatting if present\n  const jsonMatch = content.match(/```json\\n([\\s\\S]*?)\\n```/) || content.match(/{[\\s\\S]*}/);\n  const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;\n  parsedData = JSON.parse(jsonString);\n} catch (error) {\n  // Fallback parsing if JSON is malformed\n  parsedData = {\n    title: \"Data Quality Issue\",\n    description: content,\n    severity: \"Medium\",\n    labels: [\"data-quality\"],\n    assignee: null\n  };\n}\n\n// Ensure labels is an array\nif (typeof parsedData.labels === 'string') {\n  parsedData.labels = [parsedData.labels];\n}\n\n// Add severity as a label\nif (parsedData.severity) {\n  parsedData.labels = parsedData.labels || [];\n  parsedData.labels.push(parsedData.severity.toLowerCase());\n}\n\n// Store original webhook data for email\nparsedData.originalMessage = $('Data Quality Alert Webhook').first().json.message;\n\nreturn parsedData;"
+        "functionCode": "// Parse Gemini HTTP Request response and extract structured data\nconst geminiResponse = $input.first().json;\n\n// Extract content from Gemini API response structure\nlet content;\ntry {\n  // Gemini API returns: {candidates: [{content: {parts: [{text: \"...\"}]}}]}\n  content = geminiResponse.candidates[0].content.parts[0].text;\n} catch (error) {\n  // Fallback if response structure is different\n  content = JSON.stringify(geminiResponse);\n}\n\n// Parse the JSON response from Gemini\nlet parsedData;\ntry {\n  // With responseMimeType: \"application/json\", Gemini should return clean JSON\n  parsedData = JSON.parse(content);\n} catch (error) {\n  // Fallback: try to extract JSON from text that might have markdown\n  try {\n    const jsonMatch = content.match(/```json\\n([\\s\\S]*?)\\n```/) || content.match(/{[\\s\\S]*}/);\n    const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;\n    parsedData = JSON.parse(jsonString);\n  } catch (innerError) {\n    // Final fallback with safe defaults\n    parsedData = {\n      title: \"Data Quality Issue\",\n      description: content || \"Unable to parse alert content\",\n      severity: \"Medium\",\n      labels: [\"data-quality\"],\n      assignee: null\n    };\n  }\n}\n\n// Ensure labels is an array\nif (typeof parsedData.labels === 'string') {\n  parsedData.labels = [parsedData.labels];\n}\n\n// Add severity as a label\nif (parsedData.severity) {\n  parsedData.labels = parsedData.labels || [];\n  parsedData.labels.push(parsedData.severity.toLowerCase());\n}\n\n// Store original webhook data for email\nparsedData.originalMessage = $('Data Quality Alert Webhook').first().json.message;\n\nreturn parsedData;"
       },
       "id": "h9i0j1k2-l3m4-n5o6-p7q8-r9s0t1u2v3w4",
       "name": "Parse Gemini Response",
